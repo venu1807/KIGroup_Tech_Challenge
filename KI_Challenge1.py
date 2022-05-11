@@ -143,9 +143,9 @@ class Streaming:
           .appName("Stream App") \
           .getOrCreate()
         spark_sess.conf.set("mapreduce.fileoutputcommiter.marksuccessfuljobs","false")
-
+        print("You can execute the production 2 pipeline after production 1 pipeline is finished.")
         self.production_env_1(spark_sess) #  Streaming for Production env 1
-        self.production_env_2(spark_sess) # Streaming for Production env 2
+        #self.production_env_2(spark_sess) # Streaming for Production env 2
         spark_sess.stop()
 
 
