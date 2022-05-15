@@ -33,17 +33,21 @@ class Streaming:
 
         raw_data = spark.readStream.format('json').schema(prod1_schema)\
             .option('multiline', 'true').option('maxFilesPerTrigger',1)\
-            .load(self.json_path)
+            .load(self.json_path)\
+            .withColumn("current_time_stamp", current_timestamp())
 
-        raw_data.printSchema()
+        #raw_data.printSchema()
 
         query1=raw_data.select(raw_data.datetime,(raw_data.analytics.clicks).alias("analytics_clicks"),\
                         (raw_data.analytics.clicks).alias("analytics_impressions"), \
                         (raw_data.sales.quantity).alias("sales_quantity"), \
                         (raw_data.sales.total_price).alias("sales_total_price"), \
+                               (raw_data.current_time_stamp)\
                          )
-
+        #query1.withColumn("current_time_stamp",current_timestamp())
+        query1.printSchema()
         #query1.coalesce(1).write.option("header", True).csv(self.csv_path)
+        #query1.show()
 
         print(f"Please press CTRL+C to stop the stream context after few seconds.")
         query1.writeStream\
@@ -53,8 +57,8 @@ class Streaming:
             .option("checkpointLocation", "data/csv_checkpoint") \
             .outputMode('append')\
             .start()\
-            .awaitTermination()
-
+            .awaitTermination(10)
+        spark.stop()
 
     def production_env_2(self, spark_session):
         """
@@ -71,7 +75,8 @@ class Streaming:
              StructField('analytics_clicks', LongType(), True),
              StructField('analytics_impressions', LongType(), True),
              StructField('sales_quantity', LongType(), True),
-             StructField('sales_total_price', DoubleType(), True)]
+             StructField('sales_total_price', DoubleType(), True),
+             StructField('current_time_stamp', TimestampType(), True)]
         )
         print(self.csv_path)
 
@@ -83,7 +88,8 @@ class Streaming:
 
         csv_data.printSchema()
 
-        query2 = csv_data.select()
+        query2 = csv_data.select('analytics_clicks', 'analytics_impressions','sales_quantity', 'sales_total_price')\
+                .groupBy().sum()
 
         """
         query2 = csv_data.select(csv_data.datetime, (csv_data.analytics.clicks).alias("analytics_clicks"), \
@@ -91,7 +97,11 @@ class Streaming:
                                  (csv_data.sales.quantity).alias("sales_quantity"), \
                                  (csv_data.sales.total_price).alias("sales_total_price"), \
                                  )
-        """
+        query2.writeStream\
+              .format("console")\
+              .start()\
+              .awaitTermination(5)
+         """
         csv_data.writeStream \
             .format("parquet") \
             .option("header", "true") \
@@ -99,7 +109,10 @@ class Streaming:
             .outputMode('append') \
             .option("checkpointLocation", "data/parquet_checkpoint") \
             .start() \
-            .awaitTermination()
+            .awaitTermination(10)
+
+
+        spark.stop()
 
 
 
@@ -143,9 +156,9 @@ class Streaming:
           .appName("Stream App") \
           .getOrCreate()
         spark_sess.conf.set("mapreduce.fileoutputcommiter.marksuccessfuljobs","false")
-        print("You can execute the production 2 pipeline after production 1 pipeline is finished.")
-        self.production_env_1(spark_sess) #  Streaming for Production env 1
-        #self.production_env_2(spark_sess) # Streaming for Production env 2
+        print("You can execute the production 2 pipeline after production 1 pipeline is finished.values ")
+        #self.production_env_1(spark_sess) #  Streaming for Production env 1
+        self.production_env_2(spark_sess) # Streaming for Production env 2
         spark_sess.stop()
 
 
