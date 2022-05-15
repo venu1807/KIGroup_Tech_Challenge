@@ -14,9 +14,22 @@ class DimensionalModelling:
         self.json_path_in = json_path_in
         self.xml_path_in = xml_path_in
 
-    @classmethod
+
     def modelling(self, spark_session):
-        pass
+        spark = spark_session
+        # JSON
+        transaction_data = spark.read.json(self.json_path_in)
+
+        # CSV
+        customer_data = spark.read.csv(self.csv_path_in, header=True, inferSchema=True)
+
+        # XML
+        product_data = spark.read.format("xml") \
+            .options(rowTag="book").load(self.xml_path_in)
+
+        transaction_data.printSchema()
+        customer_data.printSchema()
+        product_data.printSchema()
 
     def main(self):
         spark_sess = SparkSession.builder \
