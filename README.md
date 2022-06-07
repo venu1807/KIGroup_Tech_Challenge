@@ -1,1 +1,1 @@
-# KIGroup_Tech_Challenge
+# Spark_Streaming_Challenge
